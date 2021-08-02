@@ -28,7 +28,7 @@ jobs:
       #   options: --entrypoint redis-server
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Set up Ruby
         uses: actions/setup-ruby@v1
         with:
@@ -53,7 +53,17 @@ jobs:
         run: |
           cp config/database.ci.yml config/database.yml
           rake db:create db:migrate
-
+      - name: Check for modified files
+        id: git-check
+        run: echo ::set-output name=modified::$(if git status | grep "nothing to commit"; then echo "false"; else echo "true"; fi)
+      - uses: actions/checkout@v2
+        if: steps.git-check.outputs.modified == 'true'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Update schema.rb"
+          git push
       - name: Run tests
         env:
           PGHOST: localhost
